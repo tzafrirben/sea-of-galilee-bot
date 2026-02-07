@@ -1,0 +1,35 @@
+name: Update Water Level
+
+on:
+  schedule:
+    - cron: '0 14 * * *' # Run daily at 14:00 UTC
+  workflow_dispatch:
+
+jobs:
+  update-surveys:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Download measurements
+        id: download_surveys
+        run: |
+          npm run update:surveys
+
+      - name: Commit and Push if changed
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add docs/surveys.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update surveys data" && git push)

@@ -1,0 +1,37 @@
+{
+	"name": "sea-of-galilee-bot",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"build": "tsc",
+		"update:surveys": "tsx --env-file-if-exists=.env src/update-surveys.ts docs/surveys.json",
+		"tweet:daily": "tsx --env-file-if-exists=.env src/daily-tweet.ts docs/surveys.json last_tweet.txt",
+		"format": "biome check --write .",
+		"lint": "biome check .",
+		"test": "tsx --test src/**/*.test.ts",
+		"test:coverage": "tsx --test --test-reporter=spec --experimental-test-coverage src/**/*.test.ts"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git@github.com-tzafrir-personal:tzafrirben/sea-of-galilee-bot.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"type": "commonjs",
+	"dependencies": {
+		"ajv": "^8.17.1",
+		"ajv-formats": "^3.0.1",
+		"date-fns": "^4.1.0",
+		"pino": "^10.3.0",
+		"twitter-api-v2": "^1.29.0",
+		"undici": "^7.21.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.14",
+		"@types/node": "^25.2.1",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3"
+	}
+}
