@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: '24'
+          node-version: "24"
 
       - name: Install Dependencies
         run: npm ci
@@ -25,11 +25,11 @@ jobs:
       - name: Send Tweet
         id: send_tweet
         env:
-          UPPER_RED_LINE: ${{ secrets.UPPER_RED_LINE }}
-          TWITTER_APP_KEY: ${{ secrets.TWITTER_CONSUMER_KEY }}
-          TWITTER_APP_SECRET: ${{ secrets.TWITTER_CONSUMER_SECRET }}
+          UPPER_RED_LINE: ${{ vars.UPPER_RED_LINE }}
+          TWITTER_APP_KEY: ${{ secrets.TWITTER_APP_KEY }}
+          TWITTER_APP_SECRET: ${{ secrets.TWITTER_APP_SECRET }}
           TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
-          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+          TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
         run: |
           npm run tweet:daily
 
