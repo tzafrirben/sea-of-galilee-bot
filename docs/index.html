@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sea of Galilee Water Level</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+            color: var(--primary-color);
+        }
+
+        .current-status {
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 60vh;
+            width: 100%;
+        }
+
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 50vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Sea of Galilee Water Level</h1>
+            <div id="status" class="current-status">Loading data...</div>
+        </header>
+
+        <div class="chart-container">
+            <canvas id="levelChart"></canvas>
+        </div>
+    </div>
+
+    <footer>
+        <p>Data source: <a href="https://data.gov.il/dataset/kineret-level" target="_blank">Israeli Government Data</a></p>
+        <p>Updated automatically daily.</p>
+    </footer>
+
+    <script>
+        // Constants
+        const UPPER_RED_LINE = -208.80;
+        const LOWER_RED_LINE = -213.00;
+        const BLACK_LINE = -214.87;
+
+        async function fetchData() {
+            try {
+                const response = await fetch('./surveys.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error("Could not fetch surveys:", error);
+                document.getElementById('status').innerText = "Error loading data.";
+                return [];
+            }
+        }
+
+        function updateStatus(latestRecord) {
+            if (!latestRecord) return;
+            const date = new Date(latestRecord.date).toLocaleDateString('en-IL');
+            const level = latestRecord.level.toFixed(3);
+            const gap = (UPPER_RED_LINE - latestRecord.level).toFixed(2);
+            
+            document.getElementById('status').innerHTML = `
+                Current Level: <strong>${level}m</strong> (as of ${date})<br>
+                <span style="font-size: 0.9em; color: #666;">${Math.abs(gap * 100).toFixed(0)} cm below Upper Red Line</span>
+            `;
+        }
+
+        async function initChart() {
+            const rawData = await fetchData();
+            if (rawData.length === 0) return;
+
+            // Sort chronological (oldest -> newest) for the chart
+            // The JSON is usually newest -> oldest
+            const sortedData = [...rawData].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Extract arrays for Chart.js
+            const labels = sortedData.map(d => d.date);
+            const levels = sortedData.map(d => d.level);
+            
+            // Create constant arrays for reference lines
+            const upperRedLineData = new Array(labels.length).fill(UPPER_RED_LINE);
+            const lowerRedLineData = new Array(labels.length).fill(LOWER_RED_LINE);
+            const blackLineData = new Array(labels.length).fill(BLACK_LINE);
+
+            // Update status with the latest record (last in sorted array)
+            updateStatus(sortedData[sortedData.length - 1]);
+
+            const ctx = document.getElementById('levelChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Water Level (m)',
+                            data: levels,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0, // Hide points for cleaner look on large datasets
+                            pointHitRadius: 10,
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Upper Red Line',
+                            data: upperRedLineData,
+                            borderColor: '#e74c3c', // Red
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: 'Lower Red Line',
+                            data: lowerRedLineData,
+                            borderColor: '#e74c3c', // Red
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: 'Black Line',
+                            data: blackLineData,
+                            borderColor: '#2c3e50', // Black
+                            borderWidth: 1.5,
+                            borderDash: [2, 2],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(3)} m`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            },
+                            ticks: {
+                                maxTicksLimit: 12 // Limit labels to avoid clutter
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Level (Meters)'
+                            },
+                            // Add some padding to the scale
+                            suggestedMax: -208,
+                            suggestedMin: -215
+                        }
+                    }
+                }
+            });
+        }
+
+        initChart();
+    </script>
+</body>
+</html>
