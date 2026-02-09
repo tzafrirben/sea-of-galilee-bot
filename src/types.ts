@@ -47,4 +47,22 @@ export interface TrendAnalysis {
 	nearestThreshold: "upper_red" | "lower_red" | "black";
 	nearestThresholdDistance: number; // in cm
 	isNearCriticalThreshold: boolean; // Within 50cm of lower red or black
+
+	// Historical records
+	historicalHigh: {
+		level: number;
+		date: string;
+		yearsAgo: number;
+	} | null;
+	historicalLow: {
+		level: number;
+		date: string;
+		yearsAgo: number;
+	} | null;
+	comparisonToPreviousYears: Array<{
+		year: number;
+		level: number;
+		difference: number; // in cm, positive means current is higher
+	}>;
+	rankPercentile: number; // 0-100, where 100 is highest ever
 }

@@ -1,6 +1,8 @@
 import {
 	differenceInDays,
+	differenceInYears,
 	getMonth,
+	getYear,
 	parseISO,
 	subDays,
 	subYears,
@@ -95,6 +97,22 @@ export function analyzeTrends(
 	const isNearCriticalThreshold =
 		Math.abs(gapToLowerRedLine) < 50 || Math.abs(gapToBlackLine) < 50;
 
+	// Calculate historical high and low
+	const { historicalHigh, historicalLow } = findHistoricalExtremes(
+		surveys,
+		currentDate,
+	);
+
+	// Compare to previous years (last 3 years)
+	const comparisonToPreviousYears = findPreviousYearsComparison(
+		surveys,
+		currentDate,
+		currentLevel,
+	);
+
+	// Calculate rank percentile
+	const rankPercentile = calculateRankPercentile(surveys, currentLevel);
+
 	return {
 		currentLevel,
 		currentDate: currentRecord.date,
@@ -113,6 +131,10 @@ export function analyzeTrends(
 		nearestThreshold: nearest.name,
 		nearestThresholdDistance: nearest.distance,
 		isNearCriticalThreshold,
+		historicalHigh,
+		historicalLow,
+		comparisonToPreviousYears,
+		rankPercentile,
 	};
 }
 
@@ -156,4 +178,94 @@ function determineSeasonalContext(
 
 	// September-November: Autumn low
 	return "autumn_low";
+}
+
+function findHistoricalExtremes(
+	surveys: SurveyRecord[],
+	currentDate: Date,
+): {
+	historicalHigh: { level: number; date: string; yearsAgo: number } | null;
+	historicalLow: { level: number; date: string; yearsAgo: number } | null;
+} {
+	if (surveys.length === 0) {
+		return { historicalHigh: null, historicalLow: null };
+	}
+
+	let highest = surveys[0];
+	let lowest = surveys[0];
+
+	for (const record of surveys) {
+		if (record.level > highest.level) {
+			highest = record;
+		}
+		if (record.level < lowest.level) {
+			lowest = record;
+		}
+	}
+
+	const highDate = parseISO(highest.date);
+	const lowDate = parseISO(lowest.date);
+
+	return {
+		historicalHigh: {
+			level: highest.level,
+			date: highest.date,
+			yearsAgo: differenceInYears(currentDate, highDate),
+		},
+		historicalLow: {
+			level: lowest.level,
+			date: lowest.date,
+			yearsAgo: differenceInYears(currentDate, lowDate),
+		},
+	};
+}
+
+function findPreviousYearsComparison(
+	surveys: SurveyRecord[],
+	currentDate: Date,
+	currentLevel: number,
+): Array<{
+	year: number;
+	level: number;
+	difference: number;
+}> {
+	const comparisons: Array<{
+		year: number;
+		level: number;
+		difference: number;
+	}> = [];
+
+	// Compare to last 3 years
+	for (let yearsBack = 1; yearsBack <= 3; yearsBack++) {
+		const targetDate = subYears(currentDate, yearsBack);
+		const record = findClosestRecord(surveys, targetDate);
+
+		if (record) {
+			const targetYear = getYear(targetDate);
+			const difference = Math.round((currentLevel - record.level) * 100); // in cm
+
+			comparisons.push({
+				year: targetYear,
+				level: record.level,
+				difference,
+			});
+		}
+	}
+
+	return comparisons;
+}
+
+function calculateRankPercentile(
+	surveys: SurveyRecord[],
+	currentLevel: number,
+): number {
+	if (surveys.length === 0) return 50;
+
+	// Count how many records are below current level
+	const belowCount = surveys.filter((r) => r.level < currentLevel).length;
+
+	// Calculate percentile (0-100, where 100 is highest)
+	const percentile = (belowCount / surveys.length) * 100;
+
+	return Math.round(percentile);
 }
