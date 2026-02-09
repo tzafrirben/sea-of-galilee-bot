@@ -41,9 +41,10 @@ const schema = {
 
 const validate = ajv.compile<ApiResponse>(schema);
 
-export function validateApiResponse(
-	data: unknown,
-): { valid: boolean; errors?: ErrorObject[] | null } {
+export function validateApiResponse(data: unknown): {
+	valid: boolean;
+	errors?: ErrorObject[] | null;
+} {
 	const valid = validate(data);
 	return { valid, errors: validate.errors };
 }

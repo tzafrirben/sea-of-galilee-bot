@@ -47,9 +47,7 @@ describe("Tweet Utils", () => {
 	});
 
 	it("returns all records if no last tweet date provided", (t: TestContext) => {
-		const surveys: SurveyRecord[] = [
-			{ date: "2023-10-01", level: -209.5 },
-		];
+		const surveys: SurveyRecord[] = [{ date: "2023-10-01", level: -209.5 }];
 		const lastTweetDate = "";
 
 		const newRecords = findNewRecords(surveys, lastTweetDate);
@@ -59,9 +57,7 @@ describe("Tweet Utils", () => {
 	});
 
 	it("returns empty array if no new records", (t: TestContext) => {
-		const surveys: SurveyRecord[] = [
-			{ date: "2023-10-01", level: -209.5 },
-		];
+		const surveys: SurveyRecord[] = [{ date: "2023-10-01", level: -209.5 }];
 		const lastTweetDate = "2023-10-01";
 
 		const newRecords = findNewRecords(surveys, lastTweetDate);

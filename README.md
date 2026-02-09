@@ -9,6 +9,7 @@ This project is an automated system that tracks the water level of the Sea of Ga
 * **Daily Data Fetching**: Retrieves the latest water level measurements from the [Israeli Government Data API](https://data.gov.il/dataset/kineret-level).
 * **Data Persistence**: Maintains a lightweight, append-only JSON database (`docs/surveys.json`) stored directly in the repository.
 * **Twitter/X Bot**: Automatically tweets daily updates comparing the current level to the Upper Red Line (full lake capacity).
+* **AI-Generated Tweets**: Optional integration with Google Gemini to generate natural, contextual Hebrew tweets with trend analysis and seasonal context (with fallback to template-based generation).
 * **Visualization Dashboard**: A live interactive chart hosted on GitHub Pages viewing historical data.
 * **CI/CD Automation**: Fully automated using GitHub Actions (no external server required).
 
@@ -49,12 +50,28 @@ The project runs on **Node.js (TypeScript)** and utilizes **GitHub Actions** for
 3. Create a `.env` file for local testing (optional):
 
     ```env
+    # Water level thresholds
     UPPER_RED_LINE=-208.80
+    LOWER_RED_LINE=-213
+    BLACK_LINE=-214.87
+
+    # Twitter API credentials
     TWITTER_APP_KEY=your_key
     TWITTER_APP_SECRET=your_secret
     TWITTER_ACCESS_TOKEN=your_token
     TWITTER_ACCESS_SECRET=your_token_secret
+
+    # LLM Configuration (optional - for AI-generated tweets)
+    GEMINI_API_KEY=AIza...
+    GEMINI_MODEL=gemini-2.0-flash
+    USE_LLM_GENERATION=true
+    MAX_TWEET_LENGTH=280
+
+    # Testing
+    DRY_RUN=true
     ```
+
+    **Note:** If `USE_LLM_GENERATION=true`, tweets will be generated using Google Gemini AI for more natural, contextual messages. Gemini offers a generous free tier (15 requests/minute, 1M tokens/day) which is perfect for daily tweets. If `false` or if the API key is missing, the system falls back to the template-based format.
 
 ### Scripts
 
