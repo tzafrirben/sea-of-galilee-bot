@@ -1,32 +1,69 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import Ajv from "ajv";
 import { TwitterApi } from "twitter-api-v2";
 import { logger } from "./logger.js";
 import { findNewRecords, formatTweet } from "./tweet-utils.js";
 import type { SurveyRecord } from "./types.js";
 
+const ajv = new Ajv({ coerceTypes: true, useDefaults: true });
+
+const envSchema = {
+	type: "object",
+	properties: {
+		UPPER_RED_LINE: { type: "number" },
+		TWITTER_APP_KEY: { type: "string", minLength: 1 },
+		TWITTER_APP_SECRET: { type: "string", minLength: 1 },
+		TWITTER_ACCESS_TOKEN: { type: "string", minLength: 1 },
+		TWITTER_ACCESS_SECRET: { type: "string", minLength: 1 },
+		DRY_RUN: { type: "boolean", default: false },
+	},
+	required: [
+		"UPPER_RED_LINE",
+		"TWITTER_APP_KEY",
+		"TWITTER_APP_SECRET",
+		"TWITTER_ACCESS_TOKEN",
+		"TWITTER_ACCESS_SECRET",
+	],
+};
+
 async function main() {
 	const surveysFile = process.argv[2] || "docs/surveys.json";
 	const lastTweetFile = process.argv[3] || "last_tweet.txt";
-	const upperRedLineStr = process.env.UPPER_RED_LINE;
 
-	// Twitter Credentials
-	const appKey = process.env.TWITTER_APP_KEY;
-	const appSecret = process.env.TWITTER_APP_SECRET;
-	const accessToken = process.env.TWITTER_ACCESS_TOKEN;
-	const accessSecret = process.env.TWITTER_ACCESS_SECRET;
+	const validate = ajv.compile(envSchema);
+	const env = {
+		UPPER_RED_LINE: process.env.UPPER_RED_LINE,
+		TWITTER_APP_KEY: process.env.TWITTER_APP_KEY,
+		TWITTER_APP_SECRET: process.env.TWITTER_APP_SECRET,
+		TWITTER_ACCESS_TOKEN: process.env.TWITTER_ACCESS_TOKEN,
+		TWITTER_ACCESS_SECRET: process.env.TWITTER_ACCESS_SECRET,
+		DRY_RUN: process.env.DRY_RUN,
+	};
 
-	if (!upperRedLineStr) {
-		logger.error("Error: UPPER_RED_LINE environment variable is not set.");
+	if (!validate(env)) {
+		logger.error({ errors: validate.errors }, "Environment validation failed");
 		process.exit(1);
 	}
 
-	const upperRedLine = Number(upperRedLineStr);
-	if (Number.isNaN(upperRedLine)) {
-		logger.error("Error: UPPER_RED_LINE is not a valid number.");
-		process.exit(1);
-	}
+	// Now env is typed correctly (mostly) and validated
+	// We need to cast it or trust it.
+	const {
+		UPPER_RED_LINE: upperRedLine,
+		TWITTER_APP_KEY: appKey,
+		TWITTER_APP_SECRET: appSecret,
+		TWITTER_ACCESS_TOKEN: accessToken,
+		TWITTER_ACCESS_SECRET: accessSecret,
+		DRY_RUN: dryRun,
+	} = env as unknown as {
+		UPPER_RED_LINE: number;
+		TWITTER_APP_KEY: string;
+		TWITTER_APP_SECRET: string;
+		TWITTER_ACCESS_TOKEN: string;
+		TWITTER_ACCESS_SECRET: string;
+		DRY_RUN: boolean;
+	};
 
 	const resolvedSurveysPath = path.resolve(surveysFile);
 	const resolvedLastTweetPath = path.resolve(lastTweetFile);
@@ -65,12 +102,9 @@ async function main() {
 
 	logger.info({ tweetText }, "Generated tweet text.");
 
-	// Send Tweet
-	if (!appKey || !appSecret || !accessToken || !accessSecret) {
-		logger.error(
-			"Missing Twitter API credentials. Cannot send tweet. (TWITTER_APP_KEY, TWITTER_APP_SECRET, TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_SECRET)",
-		);
-		process.exit(1);
+	if (dryRun) {
+		logger.info("DRY_RUN=true: Skipping tweet sending and state update.");
+		return;
 	}
 
 	const client = new TwitterApi({
