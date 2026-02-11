@@ -164,7 +164,10 @@ async function main() {
 			);
 		}
 	} else {
-		logger.info("Using template-based generation");
+		logger.info(
+			{ useLlmGeneration, geminiApiKey },
+			"Using template-based generation",
+		);
 		tweetText = formatTweet(latestRecord, upperRedLine);
 		logger.info({ tweetText, source: "template" }, "Generated tweet text.");
 	}
